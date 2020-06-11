@@ -1,7 +1,6 @@
 #---------------------------------------------------------
 #                       LIBRARIES
 #---------------------------------------------------------
-library(UpdateAnno)
 library(plotly)
 library(data.table)
 
@@ -13,10 +12,11 @@ options(shiny.host = "0.0.0.0",
 #---------------------------------------------------------
 #                       DATA
 #---------------------------------------------------------
+# setwd("/home/evanhenrich/Documents/FHCRC/ISAnalyteExplorer/app/") # for local testing
 
 # GE Input
 geData <- readRDS("data/new_boxplot_data.rds")
-btms <- UpdateAnno::emory_blood_transcript_modules
+btms <- readRDS("data/btms.rds")
 btmNames <- names(btms)
 genes <- unique(geData$Gene$gbValue)
 

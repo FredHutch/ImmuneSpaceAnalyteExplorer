@@ -3,4 +3,4 @@
 .RData
 *.Rproj
 .*.Rnb.cached
-data/*
+app/data/*
