@@ -14,13 +14,16 @@ options(shiny.host = "0.0.0.0",
 #                       DATA
 #---------------------------------------------------------
 
-# boxplot format: data[gene/btm]
-data <- readRDS("data/full_boxplot_data.rds")
-
-# Input Options
+# GE Input
+geData <- readRDS("data/new_boxplot_data.rds")
 btms <- UpdateAnno::emory_blood_transcript_modules
 btmNames <- names(btms)
-genes <- unique(data$Gene$gbValue)
+genes <- unique(geData$Gene$gbValue)
+
+# Non-GE Input
+nonGEData <- readRDS("data/nonGE_boxplot_data.rds")
+analytes <- lapply(nonGEData, "[[", "analyte")
+analytes <- lapply(analytes, unique)
 
 #---------------------------------------------------------
 #                       START APP

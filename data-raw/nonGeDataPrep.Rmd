@@ -1,0 +1,80 @@
+
+```{r knitr-opts, echo = FALSE}
+library(knitr)
+opts_chunk$set(message = FALSE, echo = FALSE, warning = FALSE)
+```
+
+```{r, retrieve-data}
+library(ImmuneSpaceR)
+library(Rlabkey)
+library(data.table)
+source("../R/utils.R")
+
+assayParameters <- list(
+               elisa = list(
+                  analyte_name = "analyte",
+                  analyte_value = "value_reported"),
+               elispot = list(
+                  analyte_name = "analyte",
+                  analyte_value = "cell_number_preferred"),
+               mbaa = list(
+                  analyte_name = "analyte",
+                  analyte_value = "concentration_value")
+               )
+
+data <- list(raw = list(),
+             processed = list())
+
+con <- CreateConnection("")
+
+# Condition
+studyInfo <- labkey.selectRows(
+    baseUrl = "https://www.immunespace.org",
+    folderPath = "/Studies/",
+    schemaName = "immport",
+    queryName = "study",
+    colNameOpt = "rname"
+)
+
+for(assay in names(assayParameters)){
+  params <- assayParameters[[assay]]
+  cols <- c("ParticipantId", "study_time_collected", "study_time_collected_unit", 
+            params$analyte_name, params$analyte_value)
+  data$raw[[assay]] <- labkey.selectRows(
+    baseUrl = con$config$labkey.url.base,
+    folderPath = con$config$labkey.url.path,
+    schemaName = "study",
+    queryName = assay,
+    colNameOpt = 'fieldname',
+    colSelect = cols
+  )
+}
+```
+
+```{r, pre-process-data}
+data$processed <- lapply(names(assayParameters), function(assay){
+  dt <- data$raw[[assay]]
+  params <- assayParameters[[assay]]
+  dt <- suppressMessages(correctTimeUnits(dt))
+  dt <- matchBaselineAndPostTimepoints(dt, params$analyte_name, params$analyte_value)
+  dt <- dt[complete.cases(dt)]
+  dt <- addFoldChange(dt)
+  dt$Study <- gsub("^SUB\\d{6,8}\\.", "SDY", dt$ParticipantId)
+  dt$condition <- studyInfo$condition_studied[ match(dt$Study, studyInfo$study_accession)]
+  dt <- addMappedCondition(dt)
+  dt[, Condition := newCondition ]
+  dt[ , `:=`(condition = NULL, 
+             newCondition = NULL,
+             baseline_value = NULL,
+             post_value = NULL) ]
+  setnames(dt, "fc", "value")
+  return(dt)
+})
+names(data$processed) <- names(assayParameters)
+```
+
+```{r, save-output}
+outputPath <- "~/Documents/FHCRC/ISAnalyteExplorer/data/"
+saveRDS(data$processed, file = paste0(outputPath, "nonGE_boxplot_data.rds"))
+```
+

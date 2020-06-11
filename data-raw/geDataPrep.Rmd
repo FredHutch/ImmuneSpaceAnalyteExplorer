@@ -1,6 +1,4 @@
 
-
-
 ```{r knitr-opts, echo = FALSE}
 library(knitr)
 opts_chunk$set(message = FALSE, echo = FALSE, warning = FALSE)
@@ -49,6 +47,7 @@ eset <- ImmuneSpaceR:::.combineEMs(esets)
 # subset eset by pids in geMetaData$hasData
 pidsWithData <- unique(geMetaData$biosample_participantid)
 eset <- eset[ , eset$participant_id %in% pidsWithData ]
+saveRDS(eset, file = "data/eset.rds")
 
 # for each pid in pData generate
 pd <- pData(eset)
@@ -61,7 +60,7 @@ colnames(tmp) <- pids
 
 for(pid in pids){
     baseline <- eset[ , eset$participant_id == pid & eset$study_time_collected == 0 ]
-    baselineEm <- exprs(baseline)
+    baselineEm <- exprs(baseline)[,1]
     post <- eset[ , eset$participant_id == pid & eset$study_time_collected != 0 ]
     postEm <- exprs(post)
     maxEm <- apply(postEm, 1, max)
@@ -97,70 +96,11 @@ studyInfo <- labkey.selectRows(
     colNameOpt = "rname"
 )
 
-study <- sapply(strsplit(pd$participant_id, "\\."), "[", 2)
-pd$study <- paste0("SDY", study)
+pd <- addStudy(pd)
 
 pd$condition <- studyInfo$condition_studied[ match(pd$study, studyInfo$study_accession)]
 
-pd$newCondition <- sapply(pd$condition, function(x) {
-    if( grepl("healthy|normal|naive", x, ignore.case = TRUE)){
-        return("Healthy")
-    }else if(grepl("influenza|H1N1", x, ignore.case = TRUE)){
-        return("Influenza")
-    }else if(grepl("CMV", x, ignore.case = TRUE)){
-        return("CMV")
-    }else if(grepl("TB|tuberculosis", x, ignore.case = TRUE)){
-        return("Tuberculosis")
-    }else if(grepl("Yellow Fever", x, ignore.case = TRUE)){
-        return("Yellow_Fever")
-    }else if(grepl("Mening", x, ignore.case = TRUE)){
-        return("Meningitis")
-    }else if(grepl("Malaria", x, ignore.case = TRUE)){
-        return("Malaria")
-    }else if(grepl("HIV", x, ignore.case = TRUE)){
-        return("HIV")
-    }else if(grepl("Dengue", x, ignore.case = TRUE)){
-        return("Dengue")
-    }else if(grepl("ZEBOV", x, ignore.case = TRUE)){
-        return("Ebola")
-    }else if(grepl("Hepatitis", x, ignore.case = TRUE)){
-        return("Hepatitis")
-    }else if(grepl("Smallpox|vaccinia", x, ignore.case = TRUE)){
-        return("Smallpox")
-    }else if(grepl("JDM|Dermatomyositis", x, ignore.case = TRUE)){
-        return("Dermatomyositis")
-    }else if(grepl("West Nile", x, ignore.case = TRUE)){
-        return("West_Nile")
-    }else if(grepl("Zika", x, ignore.case = TRUE)){
-        return("Zika")
-    }else if(grepl("Varicella", x, ignore.case = TRUE)){
-        return("Varicella_Zoster")
-    }else{
-        return("Unknown")
-    }
-})
-
-pd$ageGroup <- sapply(pd$age_reported, function(x){
-    if(x < 10){
-        return("< 10")
-    }else if(x >= 10 & x < 20){
-        return("10 to 20")
-    }else if(x >= 20 & x < 30){
-        return("20 to 30")
-    }else if(x >= 30 & x < 40){
-        return("30 to 40")
-    }else if(x >= 40 & x < 50){
-        return("40 to 50")
-    }else if(x >= 50 & x < 60){
-        return("50 to 60")
-    }else if(x >= 60 & x < 70){
-        return("60 to 70")
-    }else if(x >= 70){
-        return("> 70")
-    }else{
-        return("Unknown")
-    }
-})
+pd <- addMappedCondition(pd)
 
 pdata <- pd
 ```
@@ -208,7 +148,7 @@ boxPlotData <- list(Gene = genesDT, Btm = btmsDT)
 
 
 ```{r, save-output}
-outputPath <- "~/R/ImmuneSpaceGeneFinder/data/"
+outputPath <- "~/Documents/FHCRC/ISAnalyteExplorer/data/"
 saveRDS(boxPlotData, file = paste0(outputPath, "new_boxplot_data.rds"))
 ```
 

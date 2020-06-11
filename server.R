@@ -12,6 +12,16 @@ shinyServer(function(input, output, session) {
     #---------------------------------------------------------
     #                       MAIN
     #---------------------------------------------------------
+    observeEvent(input$selectedAssay, {
+        if(input$selectedAssay != "gene_expression"){
+            options <- analytes[[input$selectedAssay]]
+            updateSelectizeInput(session,
+                                 'analyteOptions',
+                                 choices = options,
+                                 server = TRUE)
+        }
+    })
+    
     observeEvent(input$isGene, {
         if(input$isGene == "Gene"){
             options <- genes
@@ -23,15 +33,19 @@ shinyServer(function(input, output, session) {
                              choices = options,
                              server = TRUE)
     })
-
+    
     # Generate plot
     plotData <- reactiveValues(data = NULL)
 
     observeEvent(input$submit, {
-
-        # BOXPLOT
-        tmp <- data[[input$isGene]]
-        tmp <- tmp[ tmp$gbValue == input$geneOrBtmOptions ]
+        if(input$selectedAssay == 'gene_expression'){
+            data <- geData
+            tmp <- data[[input$isGene]]
+            tmp <- tmp[ tmp$gbValue == input$geneOrBtmOptions ]
+        }else{
+            data <- nonGEData[[input$selectedAssay]]
+            tmp <- data[ data$analyte == input$analyteOptions ]
+        }
         setorder(tmp, -Condition, Study)
         plotData$data <- tmp
     })
