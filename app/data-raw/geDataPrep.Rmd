@@ -47,7 +47,7 @@ eset <- ImmuneSpaceR:::.combineEMs(esets)
 # subset eset by pids in geMetaData$hasData
 pidsWithData <- unique(geMetaData$biosample_participantid)
 eset <- eset[ , eset$participant_id %in% pidsWithData ]
-saveRDS(eset, file = "data/eset.rds")
+# saveRDS(eset, file = "data/eset.rds")
 
 # for each pid in pData generate
 pd <- pData(eset)
@@ -148,7 +148,7 @@ boxPlotData <- list(Gene = genesDT, Btm = btmsDT)
 
 
 ```{r, save-output}
-outputPath <- "~/Documents/FHCRC/ISAnalyteExplorer/data/"
+outputPath <- "../data/"
 saveRDS(boxPlotData, file = paste0(outputPath, "new_boxplot_data.rds"))
 ```
 

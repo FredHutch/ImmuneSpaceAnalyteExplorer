@@ -74,7 +74,7 @@ names(data$processed) <- names(assayParameters)
 ```
 
 ```{r, save-output}
-outputPath <- "~/Documents/FHCRC/ISAnalyteExplorer/data/"
+outputPath <- "../data/"
 saveRDS(data$processed, file = paste0(outputPath, "nonGE_boxplot_data.rds"))
 ```
 
