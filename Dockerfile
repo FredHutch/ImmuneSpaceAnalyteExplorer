@@ -1,4 +1,5 @@
 FROM fredhutch/r-shiny-base:latest
+RUN echo silly way to break cache
 RUN apt-get update -y
 RUN apt-get install -y pandoc nginx supervisor
 RUN useradd -u 5555 -m -d /home/shiny -c "shiny user" shiny
