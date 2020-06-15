@@ -6,7 +6,7 @@ before_script:
 build_test:
   script:
     - mkdir -p app/data
-    - aws s3 cp "s3://fh-pi-gottardo-r/ImmuneSpaceAnalyteExplorer/*" app/data --recursive
+    - aws s3 sync "s3://fh-pi-gottardo-r/ImmuneSpaceAnalyteExplorer/" app/data
     - docker build -t dockerimages.fhcrc.org/immunespaceanalyteexplorer:latest .
     - |
         if docker ps -a|tr -s ' '|rev|cut -d ' ' -f 1|rev|grep -q immunespaceanalyteexplorer
