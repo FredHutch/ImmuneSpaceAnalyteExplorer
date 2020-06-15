@@ -1,5 +1,5 @@
 FROM fredhutch/r-shiny-base:latest
-RUN apt-get update
+RUN apt-get update -y
 RUN apt-get install -y pandoc nginx supervisor
 RUN useradd -u 5555 -m -d /home/shiny -c "shiny user" shiny
 ADD app/. /home/shiny/
