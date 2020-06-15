@@ -7,14 +7,14 @@ build_test:
   script:
     - mkdir -p app/data
     - aws s3 sync "s3://fh-pi-gottardo-r/ImmuneSpaceAnalyteExplorer/" app/data
-    - docker build -t dockerimages.fhcrc.org/immunespaceanalyteexplorer:latest .
+    - docker build --no-cache -t dockerimages.fhcrc.org/immunespaceanalyteexplorer:latest .
     - |
         if docker ps -a|tr -s ' '|rev|cut -d ' ' -f 1|rev|grep -q immunespaceanalyteexplorer
         then
         docker stop immunespaceanalyteexplorer && docker rm --force immunespaceanalyteexplorer
         fi
     - docker run -d --name immunespaceanalyteexplorer -p 8888:8888 dockerimages.fhcrc.org/immunespaceanalyteexplorer:latest
-    - sleep 15 && curl -sI -u $TESTUSER:TESTPASS  http://localhost:8888  |head -1|grep -q "200 OK"
+    - sleep 15 && curl -sI -u $TESTUSER:$TESTPASS  http://localhost:8888  |head -1|grep -q "200 OK"
     - docker stop immunespaceanalyteexplorer && docker rm --force immunespaceanalyteexplorer
   
   
