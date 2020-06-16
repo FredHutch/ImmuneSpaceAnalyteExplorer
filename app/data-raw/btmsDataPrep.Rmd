@@ -1,0 +1,10 @@
+```{r knitr-opts, echo = FALSE}
+library(knitr)
+opts_chunk$set(message = FALSE, echo = FALSE, warning = FALSE)
+```
+
+```{r, load-utils}
+library(UpdateAnno)
+btms <- UpdateAnno::emory_blood_transcript_modules
+
+```
