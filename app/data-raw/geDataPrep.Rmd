@@ -4,10 +4,13 @@ library(knitr)
 opts_chunk$set(message = FALSE, echo = FALSE, warning = FALSE)
 ```
 
-
-```{r, get-studies-to-use}
+```{r, load-utils}
 library(Rlabkey)
 library(data.table)
+source("../R/utils.R")
+```
+
+```{r, get-studies-to-use}
 geMetaData <- labkey.selectRows(
                         baseUrl = "https://www.immunespace.org",
                         folderPath = "/Studies/",
@@ -47,7 +50,7 @@ eset <- ImmuneSpaceR:::.combineEMs(esets)
 # subset eset by pids in geMetaData$hasData
 pidsWithData <- unique(geMetaData$biosample_participantid)
 eset <- eset[ , eset$participant_id %in% pidsWithData ]
-# saveRDS(eset, file = "data/eset.rds")
+saveRDS(eset, file = "data/eset.rds")
 
 # for each pid in pData generate
 pd <- pData(eset)
@@ -149,6 +152,6 @@ boxPlotData <- list(Gene = genesDT, Btm = btmsDT)
 
 ```{r, save-output}
 outputPath <- "../data/"
-saveRDS(boxPlotData, file = paste0(outputPath, "new_boxplot_data.rds"))
+saveRDS(boxPlotData, file = paste0(outputPath, "GE_boxplot_data.rds"))
 ```
 

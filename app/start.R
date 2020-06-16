@@ -15,7 +15,7 @@ options(shiny.host = "0.0.0.0",
 # setwd("/home/evanhenrich/Documents/FHCRC/ISAnalyteExplorer/app/") # for local testing
 
 # GE Input
-geData <- readRDS("data/new_boxplot_data.rds")
+geData <- readRDS("data/GE_boxplot_data.rds")
 btms <- readRDS("data/btms.rds")
 btmNames <- names(btms)
 genes <- unique(geData$Gene$gbValue)
