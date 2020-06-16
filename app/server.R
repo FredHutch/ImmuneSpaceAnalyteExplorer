@@ -1,3 +1,25 @@
+library(plotly)
+library(data.table)
+
+#---------------------------------------------------------
+#                       DATA
+#---------------------------------------------------------
+# setwd("/home/evanhenrich/Documents/FHCRC/ISAnalyteExplorer/app/") # for local testing
+
+# GE Input
+geData <- readRDS("data/new_boxplot_data.rds")
+btms <- readRDS("data/btms.rds")
+btmNames <- names(btms)
+genes <- unique(geData$Gene$gbValue)
+
+# Non-GE Input
+nonGEData <- readRDS("data/nonGE_boxplot_data.rds")
+analytes <- lapply(nonGEData, "[[", "analyte")
+analytes <- lapply(analytes, unique)
+
+
+
+
 shinyServer(function(input, output, session) {
 
     #---------------------------------------------------------
