@@ -50,7 +50,7 @@ eset <- ImmuneSpaceR:::.combineEMs(esets)
 # subset eset by pids in geMetaData$hasData
 pidsWithData <- unique(geMetaData$biosample_participantid)
 eset <- eset[ , eset$participant_id %in% pidsWithData ]
-saveRDS(eset, file = "data/eset.rds")
+saveRDS(eset, file = "../data/eset.rds")
 
 # for each pid in pData generate
 pd <- pData(eset)
