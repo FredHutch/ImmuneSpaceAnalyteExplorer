@@ -1,0 +1,137 @@
+
+```{r knitr-opts, echo = FALSE}
+library(knitr)
+opts_chunk$set(message = FALSE, echo = FALSE, warning = FALSE)
+```
+
+```{r, load-utils}
+library(Rlabkey)
+library(data.table)
+library(ImmuneSpaceR)
+library(Biobase)
+source("../R/utils.R")
+```
+
+```{r, global}
+outputPath <- "../data/"
+```
+
+```{r, get-studies-to-use}
+geMetaData <- labkey.selectRows(
+                        baseUrl = "https://www.immunespace.org",
+                        folderPath = "/Studies/",
+                        schemaName = "assay.ExpressionMatrix.matrix",
+                        queryName = "inputSamples_computed",
+                        colNameOpt = "rname")
+keepCols <- c("biosample_participantid",
+              "biosample_study_time_collected",
+              "run_dataoutputs_name")
+geMetaData <- geMetaData[ , colnames(geMetaData) %in% keepCols ]
+
+geMetaData$study <- paste0("SDY", sapply(strsplit(geMetaData$biosample_participantid, "\\."), "[", 2))
+geMetaData$expression_matrix <- gsub("\\.tsv", "", geMetaData$run_dataoutputs_name)
+
+geMetaData <- geMetaData[ geMetaData$biosample_study_time_collected >= 0, ]
+geMetaData <- data.table(geMetaData)
+
+geMetaData <- geMetaData[ , hasData := 0 %in% unique(biosample_study_time_collected) &
+                                       length(unique(biosample_study_time_collected)) > 1,
+                            by = .(biosample_participantid)]
+geMetaData <- geMetaData[ hasData == TRUE ]
+```
+
+```{r, create-eset}
+esets <- lapply(unique(geMetaData$study), function(study){
+    con <- CreateConnection(study)
+    eset <- con$getGEMatrix(con$cache$GE_matrices$name)
+})
+
+# Combine esets
+eset <- ImmuneSpaceR:::.combineEMs(esets)
+
+# subset eset by pids in geMetaData$hasData
+pidsWithData <- unique(geMetaData$biosample_participantid)
+eset <- eset[ , eset$participant_id %in% pidsWithData ]
+saveRDS(eset, file = "../data/eset.rds")
+```
+
+```{r, clean-eset}
+# Handle baseline dupes
+# rm values before dneg7
+eset <- eset[ , eset$study_time_collected >= -7]
+
+# If pids have d0 and d7, remove dneg7.
+# If multiple baseline, select one
+baseline <- eset[, eset$study_time_collected <= 0 ]
+dupes <- baseline$participant_id[ duplicated(baseline$participant_id) ]
+bsToRemove <- sapply(dupes, function(pid){
+  dupEntries <- baseline[, baseline$participant_id == pid ]
+  toKeep <- dupEntries$biosample_accession[ dupEntries$study_time_collected == max(dupEntries$study_time_collected)][[1]]
+  currRm <- dupEntries$biosample_accession[ dupEntries$biosample_accession != toKeep]
+})
+bsToRemove <- unlist(unname(bsToRemove))
+eset <- eset[, !eset$biosample_accession %in% bsToRemove ]
+
+# Add meta-data fields for hover text
+eset$study_accession <- gsub("SUB\\d{6}\\.", "SDY", eset$participant_id)
+splitCohortTypes <- strsplit(eset$cohort_type, split = "_")
+eset$cell_type <- sapply(splitCohortTypes, "[", 2)
+
+studyInfo <- Rlabkey::labkey.selectRows(
+    baseUrl = "https://www.immunespace.org",
+    folderPath = "/Studies/",
+    schemaName = "immport",
+    queryName = "study",
+    colNameOpt = "rname"
+)
+
+eset$condition <- studyInfo$condition_studied[ match(eset$study_accession,
+                                                   studyInfo$study_accession)]
+pd <- pData(eset)
+pd <- mapCondition(pd)
+if(all.equal(rownames(pd), colnames(exprs(eset)))){
+  pData(eset) <- pd
+}else{
+  stop("ensure ordering and matching of biosample ids")
+}
+
+```
+
+
+```{r, create-gene-summary-data}
+geneSummary <- createSummaryData(eset)
+saveRDS(geneSummary, file = paste0(outputPath, "geByTimepoint_gene.rds"))
+```
+
+
+```{r, create-btm-summary-data}
+btms <- readRDS("../data/btms.rds")
+
+em <- exprs(eset)
+
+# summarize btms as average of genes included in btm
+btmList <- lapply(names(btms), function(x){
+  print(x)
+  selectRows <- which(rownames(em) %in% btms[[x]])
+  subEm <- em[ selectRows, ]
+  if(!is.null(dim(subEm))){
+    return(colMeans(subEm))
+  }else{
+    return(subEm)
+  }
+})
+
+btmEm <- data.frame(do.call(rbind, btmList), stringsAsFactors = F)
+rownames(btmEm) <- names(btms)
+
+btmEset <- ExpressionSet(
+  assayData = as.matrix(btmEm),
+  phenoData = AnnotatedDataFrame(pData(eset))
+)
+
+# save btmEset
+saveRDS(btmEset, file = paste0(outputPath, "btmEset.rds"))
+
+btmSummary <- createSummaryData(btmEset)
+saveRDS(btmSummary, file = paste0(outputPath, "geByTimepoint_btm.rds"))
+```

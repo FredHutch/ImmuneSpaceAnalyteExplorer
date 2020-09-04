@@ -58,6 +58,7 @@ data$processed <- lapply(names(assayParameters), function(assay){
   dt <- suppressMessages(correctTimeUnits(dt))
   dt <- matchBaselineAndPostTimepoints(dt, params$analyte_name, params$analyte_value)
   dt <- dt[complete.cases(dt)]
+  # TODO: log2-scale
   dt <- addFoldChange(dt)
   dt$Study <- gsub("^SUB\\d{6,8}\\.", "SDY", dt$ParticipantId)
   dt$condition <- studyInfo$condition_studied[ match(dt$Study, studyInfo$study_accession)]

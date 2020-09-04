@@ -8,42 +8,41 @@ shinyUI(fluidPage(
         # Sidebar with four inputs
         sidebarPanel(
             h3("Overview"),
-            p("This analysis allows the user to visualize log fold change of gene or analyte over time by study accession. For gene expression, the user can look at either the gene symbol level or blood transcription module level (mean of all genes assigned to module)"),
-            selectInput(inputId = "selectedAssay",
-                       label = NULL,
-                       choices = list(
-                           "Gene Expression" = "gene_expression",
-                           "MBAA" = "mbaa",
-                           "ELISA" = "elisa",
-                           "ELISPOT" = "elispot"
-                       )),
-            conditionalPanel(
-                condition = "input.selectedAssay == 'gene_expression'",
-                radioButtons(inputId = "isGene",
-                             label = "Select whether to use Gene or BTM values",
-                             choices = list("Gene" = "Gene",
-                                            "Blood Transcription Module" = "Btm"),
-                             selected = "gene"
-                ),
-                selectizeInput(inputId = "geneOrBtmOptions",
-                               label = NULL,
-                               choices = NULL,
-                               options = list(
-                                   maxItems = 1,
-                                   placeholder = "Select Gene or BTM"
-                               )
-                )
+            p("This analysis allows the user to visualize log fold change of gene or btm over time by cohort. A trendline is drawn for points with sufficient data."),
+            selectizeInput(inputId = "conditionStudied",
+                           label = NULL,
+                           choices = list("Influenza" = "Influenza",
+                                          "Meningitis" = "Meningitis",
+                                          "Herpes Zoster" = "Herpes_Zoster",
+                                          "Yellow Fever" = "Yellow_Fever",
+                                          "Malaria" = "Malaria",
+                                          "Tuberculosis" = "Tuberculosis",
+                                          "Ebola" = "Ebola",
+                                          "HIV" = "HIV",
+                                          "Palmoplantar Pustulosis" = "Palmoplantar_Pustulosis",
+                                          "Dermatomyositis" = "Dermatomyositis",
+                                          "Hepatitis" = "Hepatitis",
+                                          "Varicella Zoster" = "Varicella_Zoster",
+                                          "Smallpox" = "Smallpox",
+                                          "Healthy" = "Healthy"),
+                           options = list(
+                               maxItems = 5,
+                               placeholder = "Select Conditions Studied"
+                           )
             ),
-            conditionalPanel(
-                condition = "input.selectedAssay != 'gene_expression'",
-                selectizeInput(inputId = "analyteOptions",
-                               label = NULL,
-                               choices = NULL,
-                               options = list(
-                                   maxItems = 1,
-                                   placeholder = "Select Analyte"
-                               )
-                )
+            radioButtons(inputId = "isGene",
+                         label = "Select whether to use Gene or BTM values",
+                         choices = list("Gene" = "Gene",
+                                        "Blood Transcription Module" = "Btm"),
+                         selected = "Gene"
+            ),
+            selectizeInput(inputId = "geneOrBtmOptions",
+                           label = NULL,
+                           choices = NULL,
+                           options = list(
+                               maxItems = 1,
+                               placeholder = "Select Gene or BTM"
+                           )
             ),
             actionButton("submit","Submit"),
             h3(),
