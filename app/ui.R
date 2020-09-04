@@ -8,7 +8,7 @@ shinyUI(fluidPage(
         # Sidebar with four inputs
         sidebarPanel(
             h3("Overview"),
-            p("This analysis allows the user to visualize log fold change of gene or btm over time by cohort. A trendline is drawn for points with sufficient data."),
+            p("This analysis allows the user to visualize log-2 fold change of gene or btm over time by cohort. A trendline is drawn for points with sufficient data."),
             selectizeInput(inputId = "conditionStudied",
                            label = NULL,
                            choices = list("Influenza" = "Influenza",

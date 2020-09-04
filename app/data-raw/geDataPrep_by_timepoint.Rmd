@@ -94,7 +94,6 @@ if(all.equal(rownames(pd), colnames(exprs(eset)))){
 }else{
   stop("ensure ordering and matching of biosample ids")
 }
-
 ```
 
 
