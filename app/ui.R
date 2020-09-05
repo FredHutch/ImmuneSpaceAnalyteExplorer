@@ -24,7 +24,8 @@ shinyUI(fluidPage(
                                           "Hepatitis" = "Hepatitis",
                                           "Varicella Zoster" = "Varicella_Zoster",
                                           "Smallpox" = "Smallpox",
-                                          "Healthy" = "Healthy"),
+                                          "Healthy" = "Healthy",
+                                          "Pneumonia" = "Pneumonia"),
                            options = list(
                                maxItems = 5,
                                placeholder = "Select Conditions Studied"

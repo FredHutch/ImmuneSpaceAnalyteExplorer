@@ -5,8 +5,8 @@
 #'
 mapCondition <- function(pd){
   
-  unmarkedInfluenzaStudies <- c("301", "144", "224", "180",
-                                "80", "296", "364", "368", "387")
+  unmarkedInfluenzaStudies <- c("301", "144", "224", "80",
+                                "296", "364", "368", "387")
   unmarkedInfluenzaStudies <- paste0("SDY", unmarkedInfluenzaStudies)
   unmarkedHepBStudies <- c("SDY690", "SDY89", "SDY299")
   unmarkedSmallpoxStudies <- c("SDY1370")
@@ -16,8 +16,17 @@ mapCondition <- function(pd){
   pd$mappedCondition <- apply(pd, 1, function(x) {
     study <- x[["study_accession"]]
     condition <- x[["condition"]]
+    cohort <- x[["cohort"]]
     
-    if(study %in% unmarkedInfluenzaStudies | 
+    if(study == "SDY180"){
+      if(grepl("Saline", cohort)){
+        return("Healthy")
+      }else if(grepl("Pneunomax23", cohort)){
+        return("Pneumonia")
+      }else{
+        return("Influenza")
+      }
+    }else if(study %in% unmarkedInfluenzaStudies | 
       grepl("influenza|H1N1", condition, ignore.case = TRUE)){
       return("Influenza")
     }else if(study %in% unmarkedHepBStudies |
