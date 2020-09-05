@@ -4,7 +4,7 @@ library(RColorBrewer)
 #---------------------------------------------------------
 #                       DATA
 #---------------------------------------------------------
-setwd("/home/evanhenrich/Documents/FHCRC/ISAnalyteExplorer/app/") # for local testing
+# setwd("/home/evanhenrich/Documents/FHCRC/ISAnalyteExplorer/app/") # for local testing
 
 # GE Input
 allData.gene <- readRDS("data/geByTimepoint_gene.rds")
