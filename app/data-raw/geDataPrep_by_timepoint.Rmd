@@ -96,12 +96,10 @@ if(all.equal(rownames(pd), colnames(exprs(eset)))){
 }
 ```
 
-
 ```{r, create-gene-summary-data}
 geneSummary <- createSummaryData(eset)
 saveRDS(geneSummary, file = paste0(outputPath, "geByTimepoint_gene.rds"))
 ```
-
 
 ```{r, create-btm-summary-data}
 btms <- readRDS("../data/btms.rds")
