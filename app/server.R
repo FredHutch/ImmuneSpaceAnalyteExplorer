@@ -107,7 +107,7 @@ shinyServer(function(input, output, session) {
     #               gs.diseaseStudied = "Influenza",
     #               gs.timepoint = "1-Days",
     #               gs.responseBehavior = "up-regulated",
-    #               analyteSelection = "21357945_1-Days_up-regulated",
+    #               analyteSelection = "Early patterns of gene expression correlate with the humoral immune response to influenza vaccination in humans",
     #               conditionStudied = "Influenza")
 
 
@@ -188,7 +188,6 @@ shinyServer(function(input, output, session) {
         
         pubmedBaseUrl <- "https://pubmed.ncbi.nlm.nih.gov/"
 
-        
         if(input$analyteType == 'Gene'){
             data <- allData.gene
             
@@ -215,6 +214,8 @@ shinyServer(function(input, output, session) {
             
             metaDataOptions <- list(pageLength = 5)
             
+            selection <- input$analyteSelection
+            
         }else if(input$analyteType == 'Btm'){
             data <- allData.btm
             
@@ -225,6 +226,9 @@ shinyServer(function(input, output, session) {
                                     paging     = FALSE,
                                     info       = FALSE,
                                     ordering   = FALSE)
+            
+            selection <- input$analyteSelection
+            
             
         }else if(input$analyteType == 'GeneSignature'){
             data <- allData.geneSignatures
@@ -245,8 +249,15 @@ shinyServer(function(input, output, session) {
                                     info       = FALSE,
                                     ordering   = FALSE)
             
+            
+            selected <- which(geneSignatures$disease_studied == input$gs.diseaseStudied &
+                              geneSignatures$updated_response_behavior == input$gs.responseBehavior &
+                              geneSignatures$disease_studied == input$gs.diseaseStudied &
+                              geneSignatures$pubmed_titles == input$analyteSelection)
+            selection <- geneSignatures$uid[ selected ]
+            
         }
-        plotData$data <- data[ data$analyte == input$analyteSelection &
+        plotData$data <- data[ data$analyte == selection &
                                data$mappedCondition %in% input$conditionStudied, ]
         
         metaData$data <- datatable(info, 
