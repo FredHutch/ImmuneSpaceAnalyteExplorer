@@ -232,8 +232,12 @@ shinyServer(function(input, output, session) {
             
         }else if(input$analyteType == 'GeneSignature'){
             data <- allData.geneSignatures
+            selected <- which(geneSignatures$disease_studied == input$gs.diseaseStudied &
+                                  geneSignatures$updated_response_behavior == input$gs.responseBehavior &
+                                  geneSignatures$disease_studied == input$gs.diseaseStudied &
+                                  geneSignatures$pubmed_titles == input$analyteSelection)
             
-            info <- geneSignatures[ geneSignatures$pubmed_titles == input$analyteSelection[1], ]
+            info <- geneSignatures[ selected, ]
             info$link <- paste0('<a href="', 
                                 paste0(pubmedBaseUrl, info$publication_reference), 
                                 '">', 
@@ -250,10 +254,7 @@ shinyServer(function(input, output, session) {
                                     ordering   = FALSE)
             
             
-            selected <- which(geneSignatures$disease_studied == input$gs.diseaseStudied &
-                              geneSignatures$updated_response_behavior == input$gs.responseBehavior &
-                              geneSignatures$disease_studied == input$gs.diseaseStudied &
-                              geneSignatures$pubmed_titles == input$analyteSelection)
+            
             selection <- geneSignatures$uid[ selected ]
             
         }
