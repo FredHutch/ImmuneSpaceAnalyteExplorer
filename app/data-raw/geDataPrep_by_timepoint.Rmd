@@ -97,14 +97,16 @@ if(all.equal(rownames(pd), colnames(exprs(eset)))){
 ```
 
 ```{r, create-gene-summary-data}
-geneSummary <- createSummaryData(eset)
+geneSummary <- createSummaryData(eset, logData = TRUE)
 saveRDS(geneSummary, file = paste0(outputPath, "geByTimepoint_gene.rds"))
+```
+
+```{r, extract-em}
+em <- exprs(eset)
 ```
 
 ```{r, create-btm-summary-data}
 btms <- readRDS("../data/btms.rds")
-
-em <- exprs(eset)
 
 # summarize btms as average of genes included in btm
 btmList <- lapply(names(btms), function(x){
@@ -129,6 +131,42 @@ btmEset <- ExpressionSet(
 # save btmEset
 saveRDS(btmEset, file = paste0(outputPath, "btmEset.rds"))
 
-btmSummary <- createSummaryData(btmEset)
+btmSummary <- createSummaryData(btmEset, logData = TRUE)
 saveRDS(btmSummary, file = paste0(outputPath, "geByTimepoint_btm.rds"))
+```
+
+```{r, summarize-data-by-gene-signature}
+geneSignatures <- readRDS("../data/geneSignatures.rds")
+
+# summarize gene signatures by geometric mean (recommendation by
+# S.Kleinstein and D.Chawla from Yale based on the following paper: 
+# https://www.sciencedirect.com/science/article/pii/S1074761315004550)
+geneSigList <- lapply(geneSignatures$updated_symbols, function(x){
+  symbols <- strsplit(x, ";")[[1]]
+  selectRows <- which(rownames(em) %in% symbols)
+  subEm <- em[ selectRows, ] # some symbols may not be found!
+  if(!is.null(dim(subEm))){
+    gm_mean <- apply(subEm, 2, function(p){
+      exp(sum(p) / length(p))
+    })
+    return(gm_mean)
+  }else{
+    return(subEm)
+  }
+})
+
+geneSigEm <- data.frame(do.call(rbind, geneSigList), stringsAsFactors = FALSE)
+rownames(geneSigEm) <- geneSignatures$uid
+geneSigEmRmNA <- geneSigEm[ !(is.na(geneSigEm[,1])), ] # rm signatures that could not be evaluated as no corresponding gene symbols were found
+
+geneSigEset <- ExpressionSet(
+  assayData = as.matrix(geneSigEm),
+  phenoData = AnnotatedDataFrame(pData(eset))
+)
+
+saveRDS(geneSigEset, file = paste0(outputPath, "geneSigEset.rds"))
+
+# log-fc of geometric mean on a per sample basis
+geneSigSummary <- createSummaryData(geneSigEset, logData = FALSE)
+saveRDS(geneSigSummary, file = paste0(outputPath, "geByTimepoint_geneSig.rds"))
 ```

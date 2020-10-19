@@ -149,9 +149,11 @@ addFoldChange <- function(dt){
 #' Create a summary data object for easy use with app
 #'
 #' @param eset expressionSet object with cohort column and gene or btm expression
+#' @param logData boolean is the data in log2 format
 #' @export
 #'
-createSummaryData <- function(eset){
+createSummaryData <- function(eset, logData){
+  
   eset$study_cohort <- paste(eset$study_accession, eset$cohort, sep = "_")
   
   # Create data frame with summary statistics for each cohort*timepoint
@@ -203,17 +205,24 @@ createSummaryData <- function(eset){
         if(!all.equal(dim(currEm), dim(baseEm))){
           stop()
         }
-        log_fc <- currEm - baseEm
-        mean_log_fc <- rowMeans(log_fc)
-        sd_log_fc <- apply(log_fc, 1, sd)
+        
+        if(logData){
+          fc <- currEm - baseEm
+        }else{
+          delta <- currEm - baseEm
+          fc <- delta / baseEm
+        }
+        
+        mean_fc <- rowMeans(fc)
+        sd_fc <- apply(fc, 1, sd)
         df <- data.frame(cohort = cohort,
                          cell_type = cell_type,
                          study = study,
                          mappedCondition = mappedCondition,
                          timepoint = timepoint,
-                         analyte = rownames(log_fc),
-                         mean_fold_change = mean_log_fc,
-                         sd_fold_change = sd_log_fc)
+                         analyte = rownames(fc),
+                         mean_fold_change = mean_fc,
+                         sd_fold_change = sd_fc)
       }
       return(df)
     })
@@ -221,3 +230,4 @@ createSummaryData <- function(eset){
   })
   allRes <- data.table::rbindlist(res)
 }
+

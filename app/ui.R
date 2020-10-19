@@ -8,9 +8,9 @@ shinyUI(fluidPage(
         # Sidebar with four inputs
         sidebarPanel(
             h3("Overview"),
-            p("This analysis allows the user to visualize log-2 fold change of gene or btm over time by cohort. A trendline is drawn for points with sufficient data."),
+            p("This analysis allows the user to visualize log fold change of a gene or gene set over time by cohort. In the case of genes and blood transcription modules, the fold change is the delta of log2-transformed expression values, while gene signatures uses fold change of the geometric mean. A trendline is drawn for points with sufficient data."),
             selectizeInput(inputId = "conditionStudied",
-                           label = NULL,
+                           label = "Select Conditions Studied for Plotting:",
                            choices = list("Influenza" = "Influenza",
                                           "Meningitis" = "Meningitis",
                                           "Herpes Zoster" = "Herpes_Zoster",
@@ -31,18 +31,48 @@ shinyUI(fluidPage(
                                placeholder = "Select Conditions Studied"
                            )
             ),
-            radioButtons(inputId = "isGene",
-                         label = "Select whether to use Gene or BTM values",
+            radioButtons(inputId = "analyteType",
+                         label = "Select type of feature:",
                          choices = list("Gene" = "Gene",
-                                        "Blood Transcription Module" = "Btm"),
+                                        "Blood Transcription Module" = "Btm",
+                                        "Gene Signature" = "GeneSignature"),
                          selected = "Gene"
             ),
-            selectizeInput(inputId = "geneOrBtmOptions",
+            conditionalPanel(
+                strong("Gene Signature Filters:"),
+                condition = "input.analyteType == 'GeneSignature'",
+                selectizeInput(inputId = "gs.diseaseStudied",
+                               label = NULL,
+                               choices = NULL,
+                               options = list(
+                                   maxItems = 1,
+                                   placeholder = "Select Disease Studied"
+                               )
+                ),
+                selectizeInput(inputId = "gs.timepoint",
+                               label = NULL,
+                               choices = NULL,
+                               options = list(
+                                   maxItems = 1,
+                                   placeholder = "Select Timepoints"
+                               )
+                ),
+                selectizeInput(inputId = "gs.responseBehavior",
+                               label = NULL,
+                               choices = NULL,
+                               options = list(
+                                   maxItems = 1,
+                                   placeholder = "Select Response Behavior"
+                               )
+                )
+            ),
+            strong("Selected Gene or Gene Set"),
+            selectizeInput(inputId = "analyteSelection",
                            label = NULL,
                            choices = NULL,
                            options = list(
                                maxItems = 1,
-                               placeholder = "Select Gene or BTM"
+                               placeholder = "Select Gene or Gene Set"
                            )
             ),
             actionButton("submit","Submit"),
@@ -50,9 +80,12 @@ shinyUI(fluidPage(
             p("Shiny app development by Evan Henrich @ Fred Hutch.")
         ),
 
-        # Show grouped boxplots
+        # OUTPUT
         mainPanel(
-            plotly::plotlyOutput("boxPlot", height = "700px")
+            tabsetPanel(type = "tabs",
+                        tabPanel("Plots",  plotly::plotlyOutput("linePlots", height = "700px")),
+                        tabPanel("Meta-Data", DT::dataTableOutput('metaData'))
+            )
         )
     )
 

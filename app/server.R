@@ -1,4 +1,5 @@
 library(plotly)
+library(DT)
 library(RColorBrewer)
 
 #---------------------------------------------------------
@@ -6,20 +7,30 @@ library(RColorBrewer)
 #---------------------------------------------------------
 # setwd("/home/evanhenrich/Documents/FHCRC/ISAnalyteExplorer/app/") # for local testing
 
-# GE Input
+# data summarized by timepoint
 allData.gene <- readRDS("data/geByTimepoint_gene.rds")
 allData.btm <- readRDS("data/geByTimepoint_btm.rds")
-btms <- readRDS("data/btms.rds")
-btmNames <- names(btms)
-genes <- unique(allData.gene$analyte)
+allData.geneSignatures <- readRDS("data/geByTimepoint_geneSig.rds")
 
+# Meta-Data
+btmMetaData <- readRDS("data/btm_metadata.rds")
+geneSignatures <- readRDS("data/geneSignatures.rds")
+
+
+# Helpers
 getFigureList <- function(pd){
     selectedConditions <- unique(pd$mappedCondition)
     selectedAnalyte <- unique(pd$analyte)
     
     figList <- list()
-    pal <- RColorBrewer::brewer.pal(n = 8, "Set3")
+    
+    # color-palette
+    pal <- RColorBrewer::brewer.pal(n = 7, "Dark2")
     pal <- sample(pal, length(selectedConditions))
+    
+    # Axes
+    dayRange <- range(pd$timepoint)
+    fcRange <- range(pd$mean_fold_change)
     
     for(i in 1:length(selectedConditions)){
         condition <- as.character(selectedConditions[[i]])
@@ -73,7 +84,9 @@ getFigureList <- function(pd){
         }
         
         figList[[condition]] <- p %>% layout(showlegend = FALSE,
-                                             yaxis = list(title = condition))
+                                             yaxis = list(title = condition,
+                                                          range = fcRange),
+                                             xaxis = list(range = dayRange))
     }
     
     fig <- subplot(figList, 
@@ -90,37 +103,156 @@ shinyServer(function(input, output, session) {
     #                       FOR TESTING
     #---------------------------------------------------------
 
-    # input <- list(isGene = "Gene",
-    #               geneOrBtmOptions = "A2M",
+    # input <- list(analyteType = "GeneSignature",
+    #               gs.diseaseStudied = "Influenza",
+    #               gs.timepoint = "1-Days",
+    #               gs.responseBehavior = "up-regulated",
+    #               analyteSelection = "21357945_1-Days_up-regulated",
     #               conditionStudied = "Influenza")
 
 
     #---------------------------------------------------------
     #                       MAIN
     #---------------------------------------------------------
-    observeEvent(input$isGene, {
-        if(input$isGene == "Gene"){
-            options <- genes
-        }else{
-            options <- btmNames
+    observeEvent(input$analyteType, {
+        
+        if(input$analyteType == "Gene"){
+            options <- unique(allData.gene$analyte)
+        }else if(input$analyteType == "Btm"){
+            options <- btmMetaData$`Module Name`
+        }else if(input$analyteType == "GeneSignature"){
+            options <- geneSignatures$pubmed_titles
         }
+        
         updateSelectizeInput(session,
-                             'geneOrBtmOptions',
+                             'analyteSelection',
                              choices = options,
                              server = TRUE)
+        
+        if(input$analyteType == "GeneSignature"){
+            options.gs.diseaseStudied <- unique(geneSignatures$disease_studied)
+            options.gs.timepoint <- unique(geneSignatures$timepoint_concat)
+            options.gs.responseBehavior <- unique(geneSignatures$updated_response_behavior)
+            
+            updateSelectizeInput(session,
+                                 'gs.diseaseStudied',
+                                 choices = options.gs.diseaseStudied,
+                                 server = TRUE)
+            
+            updateSelectizeInput(session,
+                                 'gs.timepoint',
+                                 choices = options.gs.timepoint,
+                                 server = TRUE)
+            
+            updateSelectizeInput(session,
+                                 'gs.responseBehavior',
+                                 choices = options.gs.responseBehavior,
+                                 server = TRUE)
+        }
+    })
+    
+    
+    # Gene-Signature
+    geneSignatureListener <- reactive({
+        list(input$gs.diseaseStudied,
+             input$gs.timepoint,
+             input$gs.responseBehavior)
+    })
+
+    observeEvent(geneSignatureListener(), {
+        if(input$analyteType == "GeneSignature"){
+            valid.disease <- geneSignatures$disease_studied %in% input$gs.diseaseStudied
+            valid.timepoint <- geneSignatures$timepoint_concat %in% input$gs.timepoint
+            valid.response <- geneSignatures$updated_response_behavior %in% input$gs.responseBehavior
+            
+            validNames <- geneSignatures$pubmed_titles[ valid.disease &
+                                              valid.timepoint &
+                                              valid.response ]
+            
+            if(length(validNames) == 0){
+                validNames <- "Update filters for more options"
+            }
+            
+            updateSelectizeInput(session,
+                                 'analyteSelection',
+                                 choices = validNames,
+                                 server = TRUE)
+        }
     })
     
     # Generate plot
     plotData <- reactiveValues(data = NULL)
+    metaData <- reactiveValues(data = NULL)
 
     observeEvent(input$submit, {
-        if(input$isGene == 'Gene'){
+        
+        pubmedBaseUrl <- "https://pubmed.ncbi.nlm.nih.gov/"
+
+        
+        if(input$analyteType == 'Gene'){
             data <- allData.gene
-        }else{
+            
+            selectedGene <- paste0("(;|)", input$analyteSelection[1] ,"(;|)")
+            info <- geneSignatures[ grepl(selectedGene, geneSignatures$updated_symbols), ]
+            info$link <- paste0('<a href="', 
+                                paste0(pubmedBaseUrl, info$publication_reference), 
+                                '">', 
+                                info$publication_reference,
+                                '</a>')
+            
+            keepCols <- c("disease_studied", 
+                          "timepoint_concat", 
+                          "updated_response_behavior", 
+                          "pubmed_titles",
+                          "link")
+            info <- info[, colnames(info) %in% keepCols]
+            
+            colnames(info) <- c("Associated Gene Signature Disease", 
+                                "Response Behavior", 
+                                "Associated Gene Signature Article", 
+                                "Timepoint",
+                                "Article Link")
+            
+            metaDataOptions <- list(pageLength = 5)
+            
+        }else if(input$analyteType == 'Btm'){
             data <- allData.btm
+            
+            info <- btmMetaData[ btmMetaData$`Module Name` == input$analyteSelection[1] ]
+            info <- info[, -1 ] # rm module name
+            metaDataOptions <- list(pageLength = 1,
+                                    searching  = FALSE,
+                                    paging     = FALSE,
+                                    info       = FALSE,
+                                    ordering   = FALSE)
+            
+        }else if(input$analyteType == 'GeneSignature'){
+            data <- allData.geneSignatures
+            
+            info <- geneSignatures[ geneSignatures$pubmed_titles == input$analyteSelection[1], ]
+            info$link <- paste0('<a href="', 
+                                paste0(pubmedBaseUrl, info$publication_reference), 
+                                '">', 
+                                info$publication_reference,
+                                '</a>')
+            info$updated_symbols <- gsub(";", ", ", info$updated_symbols)
+            keepCols <- c("updated_symbols", "pubmed_titles", "link")
+            info <- info[, colnames(info) %in% keepCols]
+            colnames(info) <- c("Genes", "Article Title", "Article Link")
+            metaDataOptions <- list(pageLength = 1,
+                                    searching  = FALSE,
+                                    paging     = FALSE,
+                                    info       = FALSE,
+                                    ordering   = FALSE)
+            
         }
-        plotData$data <- data[ data$analyte == input$geneOrBtmOptions &
+        plotData$data <- data[ data$analyte == input$analyteSelection &
                                data$mappedCondition %in% input$conditionStudied, ]
+        
+        metaData$data <- datatable(info, 
+                                   options  = metaDataOptions, 
+                                   rownames = FALSE,
+                                   escape   = FALSE)
     })
 
 
@@ -128,7 +260,7 @@ shinyServer(function(input, output, session) {
     #                       OUTPUTS
     #---------------------------------------------------------
 
-    output$boxPlot <- plotly::renderPlotly({
+    output$linePlots <- plotly::renderPlotly({
         if(is.null(plotData$data)){
             return()
         }
@@ -136,4 +268,6 @@ shinyServer(function(input, output, session) {
         fig <- getFigureList(plotData$data)
 
     })
+    
+    output$metaData <- renderDataTable(metaData$data)
 })
