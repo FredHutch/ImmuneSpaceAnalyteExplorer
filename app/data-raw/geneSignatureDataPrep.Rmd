@@ -121,7 +121,7 @@ ge$pubmed_titles <- sapply(ge$publication_reference, function(id){
     title <- stringr::str_trim(rvest::html_text(nodes[[1]]))
 })
 
-ge$timepoint_concat <- paste(ge$updated_timepoint, ge$updated_timepoint_units, "-")
+ge$timepoint_concat <- paste(ge$updated_timepoint, ge$updated_timepoint_units, sep = "-")
 ```
 
 ```{r, save}
