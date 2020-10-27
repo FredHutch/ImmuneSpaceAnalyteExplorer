@@ -11,9 +11,18 @@ In info section of the app, show publication title and abstract as well as link 
 ```{r, read-in}
 ge <- readRDS("../data-raw/hipc_2020-09-28_gene_expression_v31-recreated_template.RDS")
 ge <- ge[7:nrow(ge), 2:ncol(ge)]
-keepCols <- c("target_pathogen", "response_component_original", "tissue_type",
-              "response_behavior", "time_point", "time_point_units", "publication_reference")
+keepCols <- c("target_pathogen", 
+              "response_component_original", 
+              "tissue_type",
+              "response_behavior", 
+              "time_point", 
+              "time_point_units", 
+              "publication_reference",
+              "subgroup",
+              "comparison",
+              "cohort")
 ge <- ge[ , colnames(ge) %in% keepCols ]
+ge <- ge[ !duplicated(ge), ] # rm one row of technical replicate - pub27974398
 ```
 
 
@@ -65,8 +74,15 @@ library(UpdateAnno)
 ge$updated_symbols <- sapply(ge$response_component_original, function(x){
   current <- strsplit(x, "; ")[[1]]
   symbols <- UpdateAnno::mapAlias2Symbol(current)
-  final <- paste(symbols, collapse = ";")
+  symbols <- symbols [ !is.na(symbols) ]
+  if(length(symbols) == 0){
+    return(NA)
+  }else{
+    return(paste(symbols, collapse = ";"))
+  }
 })
+
+ge <- ge[ !is.na(ge$updated_symbols), ]
 
 # Standardize timepoints to Days and Years
 ge$updated_timepoint_units <- sapply(ge$time_point_units, function(x){
@@ -130,15 +146,41 @@ keepCols <- c("pubmed_titles",
               "updated_response_behavior", 
               "timepoint_concat", 
               "updated_symbols",
-              "disease_studied")
+              "disease_studied",
+              "comparison",
+              "subgroup",
+              "cohort")
 ge <- ge[ , colnames(ge) %in% keepCols ]
+
 ge$uid <- apply(ge, 1, function(x){
   uid <- paste(x[["publication_reference"]],
+               x[["cohort"]],
+               x[["subgroup"]],
                x[["timepoint_concat"]],
                x[["updated_response_behavior"]],
+               x[["comparison"]],
                sep = "_")
-  uid <- gsub(" ", "", uid)
+  uid <- gsub(" ", "-", uid)
 })
-geneSignatures <- ge[ !duplicated(ge$uid), ] # lose about half the rows?
-saveRDS(geneSignatures, "../data/geneSignatures.rds")
+
+# Some uid are not unique? Perhaps multiple signatures at same timepoint
+# Make unique with additional numerical value.
+# Also update the pubmed titles to clarify difference when user is performing selection
+uids <- unique(ge$uid)
+for(id in uids){
+  rows <- which(ge$uid == id)
+  if(length(rows) > 1 ){
+    ver <- seq(1:length(rows))
+  }else{
+    ver <- 1
+  }
+  ge$uid[rows] <- paste(ge$uid[rows], ver, sep = "_")
+  ge$pubmed_titles[rows] <- paste0(ge$pubmed_titles[rows], " (", ver, ")")
+}
+
+if(any(duplicated(ge$uid))){
+  stop("Still duplicates!")
+}
+
+saveRDS(ge, "../data/geneSignatures.rds")
 ```

@@ -8,7 +8,8 @@ shinyUI(fluidPage(
         # Sidebar with four inputs
         sidebarPanel(
             h3("Overview"),
-            p("This analysis allows the user to visualize log fold change of a gene or gene set over time by cohort. In the case of genes and blood transcription modules, the fold change is the delta of log2-transformed expression values, while gene signatures uses fold change of the geometric mean. A trendline is drawn for points with sufficient data."),
+            p("This analysis allows the user to visualize log fold change of a gene or gene set over time by cohort. In the case of genes and blood transcription modules, the fold change is the delta of log2-transformed expression values, while gene signatures uses fold change of the geometric mean. A trendline is drawn for points with sufficient data.
+              For all cohorts other than 'Healthy', the exposure process was 'vaccination'."),
             selectizeInput(inputId = "conditionStudied",
                            label = "Select Conditions Studied for Plotting:",
                            choices = list("Influenza" = "Influenza",
@@ -38,33 +39,37 @@ shinyUI(fluidPage(
                                         "Gene Signature" = "GeneSignature"),
                          selected = "Gene"
             ),
+            p(),
             conditionalPanel(
-                strong("Gene Signature Filters:"),
+                h4("Gene Signature Filters:"),
                 condition = "input.analyteType == 'GeneSignature'",
-                selectizeInput(inputId = "gs.diseaseStudied",
-                               label = NULL,
+                selectizeInput(inputId = "gs.disease_studied",
+                               label = "Disease Studied:",
                                choices = NULL,
                                options = list(
                                    maxItems = 1,
                                    placeholder = "Select Disease Studied"
                                )
                 ),
-                selectizeInput(inputId = "gs.timepoint",
-                               label = NULL,
+                selectizeInput(inputId = "gs.timepoint_concat",
+                               label = "Timepoint",
                                choices = NULL,
                                options = list(
                                    maxItems = 1,
                                    placeholder = "Select Timepoints"
                                )
                 ),
-                selectizeInput(inputId = "gs.responseBehavior",
-                               label = NULL,
+                selectizeInput(inputId = "gs.updated_response_behavior",
+                               label = "Response Behavior",
                                choices = NULL,
                                options = list(
                                    maxItems = 1,
                                    placeholder = "Select Response Behavior"
                                )
-                )
+                ),
+                actionButton("applyFilters","Apply Filters"),
+                actionButton("resetFilters","Reset Filters"),
+                p("Note: Apply filters one at a time to update dropdowns")
             ),
             strong("Selected Gene or Gene Set"),
             selectizeInput(inputId = "analyteSelection",

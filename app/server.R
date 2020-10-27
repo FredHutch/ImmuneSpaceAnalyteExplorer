@@ -14,7 +14,7 @@ allData.geneSignatures <- readRDS("data/geByTimepoint_geneSig.rds")
 
 # Meta-Data
 btmMetaData <- readRDS("data/btm_metadata.rds")
-geneSignatures <- readRDS("data/geneSignatures.rds")
+gs <- readRDS("data/geneSignatures.rds")
 
 
 # Helpers
@@ -104,9 +104,9 @@ shinyServer(function(input, output, session) {
     #---------------------------------------------------------
 
     # input <- list(analyteType = "GeneSignature",
-    #               gs.diseaseStudied = "Influenza",
-    #               gs.timepoint = "1-Days",
-    #               gs.responseBehavior = "up-regulated",
+    #               gs.disease_studied = "Herpes",
+    #               gs.timepoint_concat = "ALL",
+    #               gs.updated_response_behavior = "ALL",
     #               analyteSelection = "Early patterns of gene expression correlate with the humoral immune response to influenza vaccination in humans",
     #               conditionStudied = "Influenza")
 
@@ -114,6 +114,22 @@ shinyServer(function(input, output, session) {
     #---------------------------------------------------------
     #                       MAIN
     #---------------------------------------------------------
+    # STATE
+    filters.stored <- list(disease_studied = "ALL",
+                            timepoint_concat = "ALL",
+                            updated_response_behavior = "ALL")
+    
+    # INIT
+    for(nm in names(filters.stored)){
+        uiElement <- paste0("gs.", nm)
+        updateSelectizeInput(session,
+                             uiElement,
+                             choices = c("ALL", unique(gs[[nm]])),
+                             server = TRUE)
+    }
+    
+    
+    # On Analyte Type Selection
     observeEvent(input$analyteType, {
         
         if(input$analyteType == "Gene"){
@@ -121,7 +137,7 @@ shinyServer(function(input, output, session) {
         }else if(input$analyteType == "Btm"){
             options <- btmMetaData$`Module Name`
         }else if(input$analyteType == "GeneSignature"){
-            options <- geneSignatures$pubmed_titles
+            options <- gs$uid
         }
         
         updateSelectizeInput(session,
@@ -129,55 +145,67 @@ shinyServer(function(input, output, session) {
                              choices = options,
                              server = TRUE)
         
-        if(input$analyteType == "GeneSignature"){
-            options.gs.diseaseStudied <- unique(geneSignatures$disease_studied)
-            options.gs.timepoint <- unique(geneSignatures$timepoint_concat)
-            options.gs.responseBehavior <- unique(geneSignatures$updated_response_behavior)
-            
-            updateSelectizeInput(session,
-                                 'gs.diseaseStudied',
-                                 choices = options.gs.diseaseStudied,
-                                 server = TRUE)
-            
-            updateSelectizeInput(session,
-                                 'gs.timepoint',
-                                 choices = options.gs.timepoint,
-                                 server = TRUE)
-            
-            updateSelectizeInput(session,
-                                 'gs.responseBehavior',
-                                 choices = options.gs.responseBehavior,
-                                 server = TRUE)
-        }
     })
     
-    
-    # Gene-Signature
-    geneSignatureListener <- reactive({
-        list(input$gs.diseaseStudied,
-             input$gs.timepoint,
-             input$gs.responseBehavior)
-    })
+    # GeneSignatures Conditional Filters
+    observeEvent(input$applyFilters, {
+        filters.current <- list(disease_studied = input$gs.disease_studied,
+                                timepoint_concat = input$gs.timepoint_concat,
+                                updated_response_behavior = input$gs.updated_response_behavior)
+        
+        filters.unchanged <- filters.current[ unlist(filters.current) == unlist(filters.stored) ]
 
-    observeEvent(geneSignatureListener(), {
-        if(input$analyteType == "GeneSignature"){
-            valid.disease <- geneSignatures$disease_studied %in% input$gs.diseaseStudied
-            valid.timepoint <- geneSignatures$timepoint_concat %in% input$gs.timepoint
-            valid.response <- geneSignatures$updated_response_behavior %in% input$gs.responseBehavior
-            
-            validNames <- geneSignatures$pubmed_titles[ valid.disease &
-                                              valid.timepoint &
-                                              valid.response ]
-            
-            if(length(validNames) == 0){
-                validNames <- "Update filters for more options"
+        gs.current <- gs
+        
+        for(fn in names(filters.current)){
+            if(filters.current[ fn ] != "ALL"){
+                gs.current <- gs.current[ gs.current[[fn]] == filters.current[[fn]], ]
             }
-            
+        }
+        
+        # Update all unchanged filters
+        for(fn in names(filters.unchanged)){
+            uiElement <- paste0("gs.", fn)
+            if(nrow(gs.current) > 0){
+                choices <- c("ALL", unique(gs.current[[fn]]))
+            }else{
+                choices <- "No Choices - Reset Filters!"
+            }
             updateSelectizeInput(session,
-                                 'analyteSelection',
-                                 choices = validNames,
+                                 uiElement,
+                                 choices = choices,
                                  server = TRUE)
         }
+        
+        # Update the analyteSelection
+        if(nrow(gs.current) > 0){
+            choices <- unique(gs.current$uid)
+        }else{
+            choices <- "No Choices - Reset Filters!"
+        }
+        updateSelectizeInput(session,
+                             'analyteSelection',
+                             choices = choices,
+                             server = TRUE)
+    })
+    
+    observeEvent(input$resetFilters, {
+        filters.stored <- list(disease_studied = "ALL",
+                               timepoint_concat = "ALL",
+                               updated_response_behavior = "ALL")
+        
+        for(nm in names(filters.stored)){
+            uiElement <- paste0("gs.", nm)
+            updateSelectizeInput(session,
+                                 uiElement,
+                                 choices = c("ALL", unique(gs[[nm]])),
+                                 server = TRUE)
+        }
+        
+        updateSelectizeInput(session,
+                             'analyteSelection',
+                             choices = unique(gs$uid),
+                             server = TRUE)
     })
     
     # Generate plot
@@ -192,7 +220,7 @@ shinyServer(function(input, output, session) {
             data <- allData.gene
             
             selectedGene <- paste0("(;|)", input$analyteSelection[1] ,"(;|)")
-            info <- geneSignatures[ grepl(selectedGene, geneSignatures$updated_symbols), ]
+            info <- gs[ grepl(selectedGene, gs$updated_symbols), ]
             info$link <- paste0('<a href="', 
                                 paste0(pubmedBaseUrl, info$publication_reference), 
                                 '">', 
@@ -202,19 +230,24 @@ shinyServer(function(input, output, session) {
             keepCols <- c("disease_studied", 
                           "timepoint_concat", 
                           "updated_response_behavior", 
+                          "comparison",
+                          "cohort",
+                          "subgroup",
                           "pubmed_titles",
                           "link")
             info <- info[, colnames(info) %in% keepCols]
+            info <- info[ order(match(colnames(info), keepCols))]
             
             colnames(info) <- c("Associated Gene Signature Disease", 
-                                "Response Behavior", 
-                                "Associated Gene Signature Article", 
                                 "Timepoint",
+                                "Response Behavior", 
+                                "Comparison",
+                                "Cohort",
+                                "Sub-group",
+                                "Associated Gene Signature Article", 
                                 "Article Link")
             
             metaDataOptions <- list(pageLength = 5)
-            
-            selection <- input$analyteSelection
             
         }else if(input$analyteType == 'Btm'){
             data <- allData.btm
@@ -227,38 +260,39 @@ shinyServer(function(input, output, session) {
                                     info       = FALSE,
                                     ordering   = FALSE)
             
-            selection <- input$analyteSelection
-            
             
         }else if(input$analyteType == 'GeneSignature'){
             data <- allData.geneSignatures
-            selected <- which(geneSignatures$disease_studied == input$gs.diseaseStudied &
-                                  geneSignatures$updated_response_behavior == input$gs.responseBehavior &
-                                  geneSignatures$disease_studied == input$gs.diseaseStudied &
-                                  geneSignatures$pubmed_titles == input$analyteSelection)
             
-            info <- geneSignatures[ selected, ]
+            info <- gs[ gs$uid == input$analyteSelection[1], ]
             info$link <- paste0('<a href="', 
                                 paste0(pubmedBaseUrl, info$publication_reference), 
                                 '">', 
                                 info$publication_reference,
                                 '</a>')
             info$updated_symbols <- gsub(";", ", ", info$updated_symbols)
-            keepCols <- c("updated_symbols", "pubmed_titles", "link")
+            keepCols <- c("updated_symbols", 
+                          "comparison",
+                          "cohort",
+                          "subgroup",
+                          "pubmed_titles", 
+                          "link")
             info <- info[, colnames(info) %in% keepCols]
-            colnames(info) <- c("Genes", "Article Title", "Article Link")
+            info <- info[ order(match(colnames(info), keepCols))]
+            colnames(info) <- c("Genes", 
+                                "Comparison",
+                                "Cohort",
+                                "Sub-group",
+                                "Article Title", 
+                                "Article Link")
             metaDataOptions <- list(pageLength = 1,
                                     searching  = FALSE,
                                     paging     = FALSE,
                                     info       = FALSE,
                                     ordering   = FALSE)
             
-            
-            
-            selection <- geneSignatures$uid[ selected ]
-            
         }
-        plotData$data <- data[ data$analyte == selection &
+        plotData$data <- data[ data$analyte == input$analyteSelection &
                                data$mappedCondition %in% input$conditionStudied, ]
         
         metaData$data <- datatable(info, 
