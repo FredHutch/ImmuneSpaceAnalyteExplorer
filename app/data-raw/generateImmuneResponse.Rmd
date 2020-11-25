@@ -1,0 +1,78 @@
+---
+title: "generateImmuneResponse"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = FALSE)
+```
+
+```{r load-dependencies}
+library(ImmuneSpaceR) 
+library(Rlabkey)
+library(Biobase)
+library(dplyr)
+library(data.table)
+library(limma)
+library(tidyverse)
+library(titer)
+source("../R/immuneResponseCallGeneration.R")
+source("../R/immuneResponsePreProcessing.R")
+source("../R/utils.R")
+```
+
+```{r global-variables}
+assays <- c("hai", "neut_ab_titer")
+
+postVaxDayRanges <- list(
+  hai = c(20,46),
+  neut_ab_titer = c(28,90)
+)
+
+discretizationValues <- list(
+    "RBA" = c(0.3),
+    "MFC" = c(0.3)
+)
+
+con <- CreateConnection("")
+studies <- unique(con$cache$GE_matrices$folder)
+```
+
+# Immune Response Data Retrieval
+
+```{r prepare-immune-response-data}
+immdata_all <- lapply(assays, function(assay){
+  dt <- getImmuneResponseData(assay, con, studies)
+  dt$assay <- assay
+  dt <- correctTimeUnits(dt)
+  
+  # For studies with significantly different cohorts over time
+  byCohort <- c("ARM4428", "ARM4431", "ARM4368", "ARM4369")
+  # SDY1276 - Discovery/Male (ARM4428), Validation/Female (ARM4431)
+  # SDY1264 - Trial1 (ARM4368), Trial2 (ARM4369)
+
+  dt$irpBatchName <- apply(dt, 1, function(x){
+    if(x[['arm_accession']] %in% byCohort){
+      return(paste(x[['study_accession']], x[['arm_accession']], sep = "_"))
+    }else{
+      return(x[['study_accession']])
+    }
+  })
+
+  return(dt)
+})
+names(immdata_all) <- assays
+```
+
+```{r generate-response-calls}
+# runs batches using `irpBatchName`
+immdataWithResponses <- lapply(names(immdata_all), function(assay){
+    dataWithResponses <- generateResponseCall(
+      assay = assay,
+      data = immdata_all[[assay]],
+      postVaxDayRange = postVaxDayRanges[[assay]],
+      discretizationValues = discretizationValues
+    )
+})
+selectedImmdata <- selectResponsesToUse(immdataWithResponses)
+```
