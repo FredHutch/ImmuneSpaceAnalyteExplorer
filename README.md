@@ -12,5 +12,5 @@ A main request has been segmentation of expression data by response status (e.g.
 - Once the custom report is implemented and all studies with relevant data have the module turned on, the processing method described can then be run on all studies from the RServe or remotely by an admin user in the same way as https://github.com/RGLab/LabKeyModules/blob/master/HIPCMatrix/pipeline/tasks/runMxFromCL.R
 - The reason for the above abstraction is to allow all studies to be re-run easily if one of the underlying methods or related logic have changed.  It should be expected that this will happen.
 
-Version: 1.0
+Version: 1.11
 
